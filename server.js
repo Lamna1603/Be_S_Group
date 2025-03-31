@@ -4,8 +4,9 @@ const bodyParser = require("body-parser")
 const { join } = require("path")
 const { json } = require("stream/consumers")
 
+
 const app = express()
-const port = 3000
+const port = 3001
 const usersFile = "users.json"
 
 app.use(bodyParser.json())
@@ -23,7 +24,16 @@ const writeUsers = (users)=>{
 }
 
 // lay danh sach nguoi dung
-app.get("/users",(req,res)=>{
+
+const check_sortBy = (req,res,next)=>{
+    const sortBy= req.query.sortBy
+    if(sortBy) {
+         if(sortBy !=="id_asc" && sortBy !==sortBy==="id_des") return res.status(400).send({message: "cant catch your sort method"})
+         } 
+        next ()
+}
+
+app.get("/users",check_sortBy,(req,res)=>{
 
     const sortBy  = req.query.sortBy
 
@@ -33,42 +43,59 @@ app.get("/users",(req,res)=>{
     if(sortBy==="id_asc") sorted_user.sort((a,b)=>a.id-b.id)
     if(sortBy==="id_des") sorted_user.sort((a,b)=>b.id-a.id)
 
-    res.send(sorted_user)
+    res.status(200).send(sorted_user)
 })
 
 // lay thong tin nguoi dung theo id
-app.get("/users/:id",(req,res)=>{
+
+const checkId = (req,res,next)=>{
     const id = parseInt(req.params.id)
+    if (isNaN(id)) return res.status(400).send({message: "your id is invalid"})
+    next()
+}
+
+app.get("/users/:id",checkId,(req,res)=>{
+    
     const users = readUsers()
+    const id = parseInt(req.params.id)
     const user = users.find(u => u.id===id)
 
-    if(!user) return res.status(404).send({message : "User not found"})
+    if(!user) return res.status(400).send({message : "User not found"})
     
         res.send(user)
 })
 
 //them nguoi dung
-app.post("/users",(req,res)=>{
+
+const check_infor = (req,res,next)=>{
+    const {name,age} = req.body
+    if(!isNaN(name)|| isNaN(age))
+        return res.status(400).send({message: " Name or age of new people iss invalid"})
+    next()
+}
+
+app.post("/users",check_infor,(req,res)=>{
     const users= readUsers()
     const {name,age} = req.body
-
+    
     const newUser = {
         id: users.length  ? users[users.length - 1].id +1 :1,
         name,
         age 
     }
 
+    
     users.push(newUser)
     writeUsers(users)
     res.send(users)
 })
 
 //cap nhap nguoi dung
-app.put("/users/:id",(req,res)=>{
+app.put("/users/:id",checkId,check_infor,(req,res)=>{
     const id = parseInt(req.params.id)
     const users =readUsers()
     const index_user = users.findIndex(u => u.id ===id)
-
+    
     if(index_user==-1) return res.status(404).send({message: "user not found"})
     users[index_user]={ ...users[index_user], ...req.body}
     writeUsers(users)
@@ -77,14 +104,15 @@ app.put("/users/:id",(req,res)=>{
 })
 
 // xoa nguoi dung
-app.delete("/users/:id",(req,res)=>{
+app.delete("/users/:id",checkId,(req,res)=>{
     const id = parseInt(req.params.id)
+    
     let users = readUsers()
     const newUsers = users.filter(u=> u.id !== id)
 
     if(newUsers.length===users.length) return res.status(404).send({message: "User not found!" })
     writeUsers(newUsers)
-     res.send(newUsers)
+    res.send(newUsers)
 })
 
 app.listen(port, () => {
