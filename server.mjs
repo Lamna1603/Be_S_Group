@@ -1,8 +1,12 @@
-const express = require("express")
-const fs = require("fs")
-const bodyParser = require("body-parser")
-const { join } = require("path")
-const { json } = require("stream/consumers")
+import express from "express"
+import fs from "fs"
+import bodyParser from "body-parser"
+
+import { checkId } from "./src/middlewares/checkID.js"
+import { check_infor } from "./src/middlewares/checkInfor.js"
+import { check_sortBy } from "./src/middlewares/checkSortBy.js"
+
+
 
 
 const app = express()
@@ -25,14 +29,6 @@ const writeUsers = (users)=>{
 
 // lay danh sach nguoi dung
 
-const check_sortBy = (req,res,next)=>{
-    const sortBy= req.query.sortBy
-    if(sortBy) {
-         if(sortBy !=="id_asc" && sortBy !==sortBy==="id_des") return res.status(400).send({message: "cant catch your sort method"})
-         } 
-        next ()
-}
-
 app.get("/users",check_sortBy,(req,res)=>{
 
     const sortBy  = req.query.sortBy
@@ -48,12 +44,6 @@ app.get("/users",check_sortBy,(req,res)=>{
 
 // lay thong tin nguoi dung theo id
 
-const checkId = (req,res,next)=>{
-    const id = parseInt(req.params.id)
-    if (isNaN(id)) return res.status(400).send({message: "your id is invalid"})
-    next()
-}
-
 app.get("/users/:id",checkId,(req,res)=>{
     
     const users = readUsers()
@@ -66,13 +56,6 @@ app.get("/users/:id",checkId,(req,res)=>{
 })
 
 //them nguoi dung
-
-const check_infor = (req,res,next)=>{
-    const {name,age} = req.body
-    if(!isNaN(name)|| isNaN(age))
-        return res.status(400).send({message: " Name or age of new people iss invalid"})
-    next()
-}
 
 app.post("/users",check_infor,(req,res)=>{
     const users= readUsers()
